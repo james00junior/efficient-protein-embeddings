@@ -251,6 +251,89 @@ For a representation reduced from 1280D:
 
 This is intentionally a transparent first-order model, not a monetary cloud-cost estimate. Actual infrastructure costs depend on hardware, indexing strategy, batch size, concurrency, storage tier, network topology, and workload characteristics.
 
+## Measured vector-search benchmark
+
+The engineering study was extended with an exact vector-search benchmark using **FAISS 1.7.4** and `IndexFlatIP`. Database and query vectors were L2-normalized, making inner-product search equivalent to cosine similarity.
+
+The benchmark used:
+
+- 10,000 database vectors
+- 718 query vectors
+- $K=10$
+- 5 search repeats
+- dimensions $D \in \{32,64,128,256,512,768,1024,1280\}$
+- exact 1280D search as the reference neighbour set
+
+Recall@10 measures overlap with the exact 1280D top-10 neighbour set. It therefore measures **nearest-neighbour structure preservation**, not biological classification accuracy.
+
+### Vector-search results
+
+| D | Index memory (MB) | Latency (ms/query) | QPS | Recall@10 | Storage reduction | Compression |
+|---:|---:|---:|---:|---:|---:|---:|
+| 32 | 1.22 | 0.2375 | 4,210 | 0.4418 | 97.5% | 40.00x |
+| 64 | 2.44 | 0.2880 | 3,473 | 0.5100 | 95.0% | 20.00x |
+| 128 | 4.88 | **0.2167** | **4,614** | 0.5489 | 90.0% | 10.00x |
+| 256 | 9.77 | 0.2759 | 3,625 | **0.5547** | 80.0% | 5.00x |
+| 512 | 19.53 | 0.3346 | 2,989 | 0.5504 | 60.0% | 2.50x |
+| 768 | 29.30 | 0.3381 | 2,958 | 0.5439 | 40.0% | 1.67x |
+| 1024 | 39.06 | 0.3430 | 2,916 | 0.5403 | 20.0% | 1.25x |
+| 1280 | 48.83 | 0.3938 | 2,539 | **1.0000** | 0.0% | 1.00x |
+
+The exact baseline index required approximately 0.0084 seconds to build. Reduced-dimensional indexes were substantially smaller, with index memory decreasing from 48.83 MB at 1280D to 9.77 MB at 256D and 4.88 MB at 128D.
+
+### Vector-search findings
+
+Several findings are important for the engineering interpretation.
+
+**1. Index size scales directly with dimensionality.**
+
+For this 10,000-vector benchmark, reducing 1280D to 256D reduced the vector-index representation from approximately 48.83 MB to 9.77 MB, an **80% reduction**. At 128D, the reduction was **90%**, and at 32D it was **97.5%**.
+
+This relationship is predictable for flat FP32 vector storage and provides a direct systems benefit independent of downstream classifier choice.
+
+**2. Nearest-neighbour preservation does not increase monotonically with dimension.**
+
+Recall@10 increased from 0.4418 at 32D to 0.5547 at 256D, but then remained approximately flat or decreased slightly:
+
+- 256D: 0.5547
+- 512D: 0.5504
+- 768D: 0.5439
+- 1024D: 0.5403
+
+Thus, retaining additional PCA dimensions did not produce progressively higher agreement with the original 1280D nearest-neighbour structure in this benchmark.
+
+This is an important distinction from explained variance: **preserving more embedding variance does not guarantee proportional preservation of nearest-neighbour relationships.**
+
+**3. Search performance was non-monotonic at low dimensions.**
+
+The fastest measured configuration was 128D at 0.2167 ms/query and approximately 4,614 queries/second. The 1280D baseline measured 0.3938 ms/query and approximately 2,539 queries/second.
+
+The 1280D representation therefore had approximately 1.8x the measured per-query latency of the 128D representation in this benchmark. However, the measurements at smaller dimensions were not strictly monotonic, so these timings should be interpreted as empirical measurements on the benchmark environment rather than a universal latency law.
+
+**4. Retrieval quality and biological task utility are different objectives.**
+
+The classification experiments showed that some biological tasks retained very high Macro-F1 after substantial dimensionality reduction. In contrast, the vector-search experiment showed only 0.5547 Recall@10 at 256D relative to the exact 1280D neighbour set.
+
+This does **not** mean that the 256D representation is biologically poor. It demonstrates that downstream task utility and preservation of the original embedding-space neighbourhood structure are distinct properties.
+
+This distinction is central to the engineering objective: the appropriate dimensionality depends on the workload. A classification system, a similarity-search system, and a representation-store system may have different acceptable dimensions.
+
+**5. Dimensionality should therefore be selected against workload-specific utility constraints.**
+
+The experiments now support a three-part evaluation:
+
+1. **Biological utility** — downstream classification performance.
+2. **Representation cost** — storage, memory, data movement and dimension-scaled computation.
+3. **Retrieval utility** — nearest-neighbour preservation and measured search performance.
+
+Rather than assuming that the largest representation is always necessary, the engineering problem becomes selecting the smallest representation that satisfies the utility requirements of the actual workload.
+
+### Benchmark reproducibility
+
+The vector-search benchmark used FAISS 1.7.4, exact `IndexFlatIP` search, 10,000 database vectors, 718 queries, $K=10$, and five timing repeats. The reference neighbour set was generated using the exact 1280D representation.
+
+The benchmark was run on the local experimental environment. Search timings and throughput are therefore hardware/software-specific measurements. Index-size reductions and compression ratios are representation-level quantities that scale predictably with vector count.
+
 ## Biological hierarchy
 
 Protein biology provides a natural hierarchy:
@@ -354,7 +437,7 @@ The current study has several important limitations:
 - The first-order cost model is dimension-scaled and is not a monetary cost model.
 - The superfamily/fold holdout experiments expose difficult generalization regimes, including cases where labels are poorly represented or absent in training.
 - Hierarchical shared-representation storage has not yet been experimentally validated.
-- Exact vector-search benchmarking is the next systems experiment; current search-cost discussion is therefore analytical rather than a measured vector-search result.
+- The exact vector-search benchmark uses a relatively small 10,000-vector database, so latency and throughput should not be generalized directly to production-scale vector stores.
 
 These limitations define the next experimental steps rather than weakening the engineering objective.
 
@@ -379,8 +462,8 @@ These limitations define the next experimental steps rather than weakening the e
 - [x] Measure dimensionality-dependent compute
 - [x] Measure classifier inference throughput
 - [x] Produce first-order cost model
-- [ ] Measure vector-index footprint
-- [ ] Benchmark exact vector search
+- [x] Measure vector-index footprint
+- [x] Benchmark exact vector search
 - [ ] Produce empirical utility-vs-search-cost Pareto curves
 - [ ] Define utility-threshold dimension selection
 
@@ -424,7 +507,7 @@ This reframes dimensionality reduction as a systems optimization problem spannin
 
 **Active research / engineering study**
 
-The repository contains the experimental foundation, biological dimensionality results, and the first measured engineering benchmark. The next step is to add measured vector-search behaviour and then consolidate the empirical utility/cost trade-offs.
+The repository contains the experimental foundation, biological dimensionality results, measured engineering benchmarks, and an exact vector-search benchmark. The next step is to consolidate the empirical biological utility, retrieval utility, and engineering cost trade-offs into final workload-specific decision analyses.
 
 ## License
 
