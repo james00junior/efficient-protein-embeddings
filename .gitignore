@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Local experiment artifacts
+*.npz
+*.npy
+*.pt
+*.pth
+*.pkl
+*.pickle
+
+# Extracted/raw datasets
+data/**/*.json
+data/**/*.csv
+data/**/*.tar.gz
+data/**/.extracted
+
+# Generated large outputs
+results/**/*.npz
+
+# IDE
+.vscode/
+.idea/
