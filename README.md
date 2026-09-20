@@ -334,6 +334,87 @@ The vector-search benchmark used FAISS 1.7.4, exact `IndexFlatIP` search, 10,000
 
 The benchmark was run on the local experimental environment. Search timings and throughput are therefore hardware/software-specific measurements. Index-size reductions and compression ratios are representation-level quantities that scale predictably with vector count.
 
+
+## CARE Task 1: enzyme-function generalization
+
+The study is now being extended beyond remote homology using **CARE Task 1**, an enzyme-function benchmark from the CARE benchmark suite.
+
+CARE Task 1 provides a substantially larger protein dataset and explicit enzyme-function labels, allowing the dimensionality-efficiency question to be tested on a different biological problem.
+
+The downloaded training data contain:
+
+- **184,529 protein records**
+- **173,543 unique sequences**
+- **4,936 EC-number labels**
+- **7 EC1 classes**
+- **69 EC2 classes**
+- **243 EC3 classes**
+- sequence lengths from **101 to 1,023 residues**
+- mean sequence length of approximately **394 residues**
+- identity clusters at 30%, 50%, 70%, and 90% sequence identity
+
+### CARE Task 1 data inventory
+
+The initial download notebook records the following Task 1 resources:
+
+- `protein_train.csv`
+- `30_protein_test.csv`
+- `30-50_protein_test.csv`
+- `price_protein_test.csv`
+- `promiscuous_protein_test.csv`
+
+The dataset inventory and schema were inspected before embedding generation. The primary sequence field is `Sequence`, with `EC number` as the fine-grained enzyme-function label and `EC1`, `EC2`, and `EC3` providing hierarchical labels.
+
+### CARE embedding experiment
+
+The next experiment generates **ESM-2 650M** embeddings using:
+
+`facebook/esm2_t33_650M_UR50D`
+
+with an original embedding dimension of **1280**.
+
+The CARE embedding pipeline records:
+
+- model name
+- embedding dimension
+- maximum sequence length
+- batch size
+- computation device
+- random seed
+- sequence and label metadata
+- embedding-generation timing
+- output shape and numerical validity
+
+The initial dimensionality sweep will use:
+
+$
+D \in \{32,64,128,256,512,768,1024,1280\}.
+$
+
+The CARE experiments will first emphasize EC1 and EC3 classification, followed by more fine-grained EC-number analysis where class support and the official CARE evaluation protocol permit a meaningful comparison.
+
+### Why CARE matters to the study
+
+CARE adds an important cross-dataset test.
+
+The remote-homology experiments ask whether dimensionality can be reduced while preserving protein-family/fold/superfamily discrimination.
+
+CARE asks whether the same engineering behaviour appears for **enzyme-function classification**.
+
+This lets the study distinguish between:
+
+- behaviour that may be specific to one benchmark;
+- behaviour that is consistent across different protein tasks;
+- dimensions that provide robust utility across biological workloads.
+
+The CARE identity-cluster metadata also provide an opportunity to investigate how representation requirements change as sequence similarity between training and evaluation examples changes.
+
+### CARE experiment status
+
+**Embedding generation is currently in progress.**
+
+The experiment is intentionally kept separate from the large raw dataset and generated embedding artifacts. The repository will track the experimental methodology, compact results, and reproducibility information rather than committing the full CARE dataset or large embedding matrices.
+
 ## Biological hierarchy
 
 Protein biology provides a natural hierarchy:
@@ -429,7 +510,7 @@ The goal is to make every reported result traceable to a specific experiment con
 
 The current study has several important limitations:
 
-- The present experiments focus on a specific protein embedding model and remote-homology benchmark.
+- The remote-homology results focus on a specific protein embedding model and benchmark; CARE Task 1 is now being added as an independent cross-dataset validation.
 - Results depend on the selected classifier, splits, and evaluation protocol.
 - Dimensionality reduction can preserve variance without necessarily preserving task-relevant biological information.
 - Accuracy alone is insufficient for imbalanced biological classification; Macro-F1 and balanced accuracy are therefore also reported.
@@ -438,6 +519,7 @@ The current study has several important limitations:
 - The superfamily/fold holdout experiments expose difficult generalization regimes, including cases where labels are poorly represented or absent in training.
 - Hierarchical shared-representation storage has not yet been experimentally validated.
 - The exact vector-search benchmark uses a relatively small 10,000-vector database, so latency and throughput should not be generalized directly to production-scale vector stores.
+- CARE embedding generation is currently in progress, so no CARE downstream performance or dimensionality results are reported yet.
 
 These limitations define the next experimental steps rather than weakening the engineering objective.
 
@@ -467,13 +549,26 @@ These limitations define the next experimental steps rather than weakening the e
 - [ ] Produce empirical utility-vs-search-cost Pareto curves
 - [ ] Define utility-threshold dimension selection
 
-### Phase 3 — Additional biological datasets
+### Phase 3 — Cross-dataset biological validation
+
+- [x] Identify CARE Task 1 as a second biological benchmark
+- [x] Download and inventory CARE Task 1 data
+- [x] Establish CARE Task 1 embedding pipeline
+- [ ] Complete CARE ESM-2 embedding generation
+- [ ] Validate embedding integrity and metadata alignment
+- [ ] Evaluate EC1 classification across dimensions
+- [ ] Evaluate EC3 classification across dimensions
+- [ ] Evaluate fine-grained EC-number classification where appropriate
+- [ ] Compare CARE dimensionality curves with remote homology
+- [ ] Analyze identity-aware generalization
+
+### Phase 4 — Additional reduction methods
 
 Evaluate whether the same engineering behaviour appears across other protein tasks and datasets, including additional enzyme/protein classification benchmarks.
 
 The objective is to determine whether the observed dimensionality trade-off is specific to remote homology or generalizes across biological representation tasks.
 
-### Phase 4 — Hierarchical representations
+### Phase 6 — Hierarchical representations
 
 - [ ] Construct biological group representations
 - [ ] Model protein-specific residuals
@@ -481,7 +576,7 @@ The objective is to determine whether the observed dimensionality trade-off is s
 - [ ] Measure retrieval and downstream utility
 - [ ] Quantify storage and compute savings
 
-### Phase 5 — Production-scale evaluation
+### Phase 7 — Production-scale evaluation
 
 - [ ] Evaluate million-scale embedding stores
 - [ ] Measure serialization and loading time
@@ -507,7 +602,7 @@ This reframes dimensionality reduction as a systems optimization problem spannin
 
 **Active research / engineering study**
 
-The repository contains the experimental foundation, biological dimensionality results, measured engineering benchmarks, and an exact vector-search benchmark. The next step is to consolidate the empirical biological utility, retrieval utility, and engineering cost trade-offs into final workload-specific decision analyses.
+The repository contains the experimental foundation, biological dimensionality results, measured engineering benchmarks, and an exact vector-search benchmark. CARE Task 1 has now been added as the second biological validation dataset, with ESM-2 embedding generation currently in progress. The next step is to complete CARE embeddings and evaluate whether the dimensionality/utility trade-offs observed in remote homology generalize to enzyme-function classification.
 
 ## License
 
