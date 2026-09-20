@@ -128,6 +128,69 @@ For example, some tasks retain strong performance at 256--768 dimensions, while 
 
 This motivates selecting dimensionality using an explicit utility threshold rather than applying a fixed compression ratio everywhere.
 
+### Full dimensionality sweep: class-label / family holdout
+
+The class-label experiment provides a clear example of the accuracy--dimension relationship:
+
+| D | Test accuracy | Test Macro-F1 | Explained variance |
+|---:|---:|---:|---:|
+| 32 | 0.8373 | 0.6241 | 0.7676 |
+| 64 | 0.9009 | 0.8220 | 0.8326 |
+| 128 | 0.9607 | 0.9147 | 0.8906 |
+| 256 | 0.9764 | 0.9709 | 0.9399 |
+| 512 | 0.9811 | 0.9789 | 0.9768 |
+| 768 | 0.9827 | 0.9798 | 0.9909 |
+| 1024 | 0.9827 | 0.9799 | 0.9973 |
+| 1280 | 0.9827 | 0.9799 | 1.0000 |
+
+The important engineering observation is that the curve shows strong gains from 32 to 256 dimensions, followed by progressively smaller improvements. In this experiment, 768 dimensions reaches the maximum observed test accuracy, while 1024--1280 dimensions provide essentially no additional accuracy gain.
+
+This motivates an explicit cost/utility selection rule: if a deployment target can accept a small utility difference, a substantially smaller representation may be sufficient.
+
+### Dimensionality and explained variance
+
+Across the sweep, explained variance increases monotonically with retained dimension:
+
+| D | Explained variance |
+|---:|---:|
+| 32 | 0.7676 |
+| 64 | 0.8326 |
+| 128 | 0.8906 |
+| 256 | 0.9399 |
+| 512 | 0.9768 |
+| 768 | 0.9909 |
+| 1024 | 0.9973 |
+| 1280 | 1.0000 |
+
+This also highlights an important methodological point: **variance preservation is not the same as downstream biological utility**. A representation can retain high variance while task performance behaves differently.
+
+### Generalization across biological holdouts
+
+The holdout experiments reveal a stronger effect than the raw dimensionality curve alone.
+
+For the class-label target:
+
+- family holdout reaches 0.9827 test accuracy at D=768;
+- fold holdout reaches 0.8900 at D=768;
+- superfamily holdout reaches 0.9282 at D=1280.
+
+For fold-level prediction:
+
+- family holdout reaches approximately 0.9796 at D=768;
+- fold holdout remains only 0.3162 at D=1024;
+- superfamily holdout reaches 0.6196 at D=1280.
+
+For superfamily prediction:
+
+- family holdout reaches approximately 0.9788 at D=768;
+- superfamily holdout reaches 0.5774 at D=1280.
+
+These results show that **evaluation regime can matter as much as dimensionality**. Increasing D does not automatically solve a difficult biological generalization problem.
+
+### Label-space limitation
+
+One superfamily/fold combination was not evaluated because the test set contained labels that were not present in the training set. This is a genuine label-space limitation rather than a model-performance result, and it is retained as an explicit limitation in the experimental record.
+
 ## Biological hierarchy
 
 Protein biology provides a natural hierarchy:
