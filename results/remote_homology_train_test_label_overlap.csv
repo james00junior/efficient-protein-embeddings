@@ -1,0 +1,13 @@
+holdout,target,train_unique_labels,test_unique_labels,overlapping_labels,unseen_test_labels,test_label_coverage
+family_holdout,class_label,7,7,7,0,1.0
+family_holdout,fold_label,1195,189,189,0,1.0
+family_holdout,superfamily_label,1462,235,235,0,1.0
+family_holdout,family_label,2251,310,310,0,1.0
+superfamily_holdout,class_label,7,7,7,0,1.0
+superfamily_holdout,fold_label,1195,362,362,0,1.0
+superfamily_holdout,superfamily_label,1462,427,427,0,1.0
+superfamily_holdout,family_label,2251,791,0,791,0.0
+fold_holdout,class_label,7,6,6,0,1.0
+fold_holdout,fold_label,1195,136,136,0,1.0
+fold_holdout,superfamily_label,1462,361,0,361,0.0
+fold_holdout,family_label,2251,398,0,398,0.0
